@@ -7,22 +7,22 @@
 #include <string>
 #include <iostream>
 
-#include "chrono_threejs/ChThreeJsServer.h"
+#include "chrono_webgl/ChHttpServer.h"
 
 namespace chrono {
-namespace threejs {
+namespace webgl {
   
-ChThreeJsServer::ChThreeJsServer() {
+ChHttpServer::ChHttpServer() {
 
 }
 
-ChThreeJsServer::~ChThreeJsServer() {
+ChHttpServer::~ChHttpServer() {
 
 }
 
 static struct mg_serve_http_opts s_http_server_opts;
 
-void ChThreeJsServer::HandleSumCall(struct mg_connection *nc, struct http_message *hm) {
+void ChHttpServer::HandleSumCall(struct mg_connection *nc, struct http_message *hm) {
   char n1[100], n2[100];
   double result;
 
@@ -39,7 +39,7 @@ void ChThreeJsServer::HandleSumCall(struct mg_connection *nc, struct http_messag
   mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
 }
 
-void ChThreeJsServer::EventHandler(struct mg_connection *nc, int ev, void *ev_data) {
+void ChHttpServer::EventHandler(struct mg_connection *nc, int ev, void *ev_data) {
   struct http_message *hm = (struct http_message *) ev_data;
 
   switch (ev) {
@@ -60,7 +60,7 @@ void ChThreeJsServer::EventHandler(struct mg_connection *nc, int ev, void *ev_da
   }
 }
 
-int ChThreeJsServer::run(const std::string& port, const std::string& doc_root ) {
+int ChHttpServer::run(const std::string& port, const std::string& doc_root ) {
   struct mg_mgr mgr;
   struct mg_connection *nc;
   struct mg_bind_opts bind_opts;
@@ -84,6 +84,7 @@ int ChThreeJsServer::run(const std::string& port, const std::string& doc_root ) 
   s_http_server_opts.enable_directory_listing = "yes";
 
   std::cout << "Starting RESTful server on port " << port << ":" << s_http_server_opts.document_root << std::endl;
+  
   for (;;) {
     mg_mgr_poll(&mgr, 1000);
   }

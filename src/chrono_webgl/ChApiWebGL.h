@@ -10,25 +10,25 @@
 //
 // =============================================================================
 
-#ifndef CHAPITHREEJS_H
-#define CHAPITHREEJS_H
+#ifndef CHAPIWEBGL_H
+#define CHAPIWEBGL_H
 
 #include "chrono/ChVersion.h"
 #include "chrono/core/ChPlatform.h"
 
-// When compiling this library, remember to define CH_API_COMPILE_THREEJS
-// (so that the symbols with 'ChApiThreeJs' in front of them will be
+// When compiling this library, remember to define CH_API_COMPILE_WEBGL
+// (so that the symbols with 'ChApiWebGL' in front of them will be
 // marked as exported). Otherwise, just do not define it if you
 // link the library to your code, and the symbols will be imported.
 
-#if defined(CH_API_COMPILE_THREEJS)
-#define ChApiThreeJs ChApiEXPORT
+#if defined(CH_API_COMPILE_WEBGL)
+#define ChApiWebGL ChApiEXPORT
 #else
-#define ChApiThreeJs ChApiIMPORT
+#define ChApiWebGL ChApiIMPORT
 #endif
 
 /**
-    @defgroup threejs_module THREEJS module
+    @defgroup webgl_module WEBGL module
     @brief Runtime visualization with Three.js
 
     This module can be used to provide 3D realtime rendering
@@ -38,11 +38,11 @@
 
 namespace chrono {
 
-/// @addtogroup threejs_module
+/// @addtogroup webgl_module
 /// @{
 
 /// Namespace with classes for the Irrlicht module.
-namespace threejs {}
+namespace webgl {}
 
 /// @}
 }

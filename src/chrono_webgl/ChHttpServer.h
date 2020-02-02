@@ -11,26 +11,26 @@
 // =============================================================================
 // Authors: Tobias Lang
 // =============================================================================
-#ifndef CHAPITHREEJSSERVER_H
-#define CHAPITHREEJSSERVER_H
+#ifndef CHHTTPSERVER_H
+#define CHHTTPSERVER_H
 
 #include <string>
-#include "chrono_threejs/ChApiThreeJs.h"
+#include "chrono_webgl/ChApiWebGL.h"
 
 namespace chrono {
-namespace threejs {
+namespace webgl {
 
-class ChApiThreeJs ChThreeJsServer {
+class ChApiWebGL ChHttpServer {
   public:
-    ChThreeJsServer();
-    virtual ~ChThreeJsServer();
+    ChHttpServer();
+    virtual ~ChHttpServer();
     int run(const std::string& port, const std::string& doc_root );
   private:
     static void EventHandler(struct mg_connection *nc, int ev, void *ev_data);
     static void HandleSumCall(struct mg_connection *nc, struct http_message *hm);
 };
 
-} // end namespace threejs
+} // end namespace webgl
 } // end namespace chrono
 
 #endif

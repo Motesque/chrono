@@ -48,7 +48,7 @@ endif()
 # Enable debugging CMake output
 #-----------------------------------------------------------------------------
 
-set(DBG_SCRIPT false)
+set(DBG_SCRIPT true)
 
 #-----------------------------------------------------------------------------
 # Find PYTHON
@@ -56,13 +56,13 @@ set(DBG_SCRIPT false)
 
 message(STATUS "...find Python")
 
-set(Python_ADDITIONAL_VERSIONS 3.4)
-find_package(PythonInterp REQUIRED)
-find_package(PythonLibs ${PYTHON_VERSION_STRING} EXACT) 
 
-get_filename_component(CH_PYTHONDIR "${PYTHON_EXECUTABLE}" PATH)
-set(CH_PYTHONINC "${PYTHON_INCLUDE_DIR}")
-set(CH_PYTHONLIB "${PYTHON_LIBRARIES}")
+find_package (Python3 COMPONENTS Interpreter Development REQUIRED)
+
+
+get_filename_component(CH_PYTHONDIR "${Python3_EXECUTABLE}" PATH)
+set(CH_PYTHONINC "${Python3_INCLUDE_DIRS}")
+set(CH_PYTHONLIB "${Python3_LIBRARIES}")
 
 if (DBG_SCRIPT)
   message("CH_PYTHONDIR:   ${CH_PYTHONDIR}")
@@ -174,7 +174,7 @@ if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
 else()
   SWIG_ADD_LIBRARY(${CHPY_CORE} LANGUAGE python SOURCES ${CHPY_CORE_MODULE_FILE})
 endif()
-SWIG_LINK_LIBRARIES(${CHPY_CORE} ${PYTHON_LIBRARY} ChronoEngine)
+SWIG_LINK_LIBRARIES(${CHPY_CORE} ${CH_PYTHONLIB} ChronoEngine)
 
 # Ensure that the PYD library file is generated in the bin/ directory.
 set_target_properties(${SWIG_MODULE_${CHPY_CORE}_REAL_NAME} PROPERTIES 
@@ -252,7 +252,7 @@ if(ENABLE_MODULE_POSTPROCESS)
   else()
     SWIG_ADD_LIBRARY(${CHPY_POSTPROCESS} LANGUAGE python SOURCES ${CHPY_POSTPROCESS_MODULE_FILE})
   endif()
-  SWIG_LINK_LIBRARIES(${CHPY_POSTPROCESS} ${PYTHON_LIBRARY} ChronoEngine ChronoEngine_postprocess)
+  SWIG_LINK_LIBRARIES(${CHPY_POSTPROCESS} ${CH_PYTHONLIB} ChronoEngine ChronoEngine_postprocess)
 
   # Ensure that the PYD library file is generated in the bin/ directory.
   set_target_properties(${SWIG_MODULE_${CHPY_POSTPROCESS}_REAL_NAME} PROPERTIES 
@@ -321,7 +321,7 @@ endif()
   else()
     SWIG_ADD_LIBRARY(${CHPY_FEA} LANGUAGE python SOURCES ${CHPY_FEA_MODULE_FILE})
   endif()
-SWIG_LINK_LIBRARIES(${CHPY_FEA} ${PYTHON_LIBRARY} ChronoEngine)
+SWIG_LINK_LIBRARIES(${CHPY_FEA} ${CH_PYTHONLIB} ChronoEngine)
 
   # Ensure that the PYD library file is generated in the bin/ directory.
   set_target_properties(${SWIG_MODULE_${CHPY_FEA}_REAL_NAME} PROPERTIES 
@@ -394,7 +394,7 @@ if(ENABLE_MODULE_IRRLICHT)
   else()
     SWIG_ADD_LIBRARY(${CHPY_IRRLICHT} LANGUAGE python SOURCES ${CHPY_IRRLICHT_MODULE_FILE})
   endif()
-  SWIG_LINK_LIBRARIES(${CHPY_IRRLICHT} ${PYTHON_LIBRARY} ChronoEngine ChronoEngine_irrlicht)
+  SWIG_LINK_LIBRARIES(${CHPY_IRRLICHT} ${CH_PYTHONLIB} ChronoEngine ChronoEngine_irrlicht)
 
   # Ensure that the PYD library file is generated in the bin/ directory.
   set_target_properties(${SWIG_MODULE_${CHPY_IRRLICHT}_REAL_NAME} PROPERTIES 
@@ -439,6 +439,76 @@ if(ENABLE_MODULE_IRRLICHT)
 
 endif()
 
+#-----------------------------------------------------------------------------
+# MODULE for the webgl python wrapper.
+#-----------------------------------------------------------------------------
+
+if(ENABLE_MODULE_WEBGL)
+
+  message(STATUS "...add Chrono::Python WEBGL module")
+  
+  # Python module name
+  set(CHPY_WEBGL webgl)
+
+  # Interface files
+  set(CHPY_WEBGL_MODULE_FILE 
+      ChModuleWebGL.i
+      )
+
+  #include_directories(${CH_IRRLICHTINC})
+
+  set_source_files_properties(${CHPY_WEBGL_MODULE_FILE} PROPERTIES CPLUSPLUS ON)
+
+  # Create the SWIG module.
+  if(${CMAKE_VERSION} VERSION_LESS "3.8.0")
+    SWIG_ADD_MODULE(${CHPY_WEBGL} python ${CHPY_WEBGL_MODULE_FILE})
+  else()
+    SWIG_ADD_LIBRARY(${CHPY_WEBGL} LANGUAGE python SOURCES ${CHPY_WEBGL_MODULE_FILE})
+  endif()
+  SWIG_LINK_LIBRARIES(${CHPY_WEBGL} ${CH_PYTHONLIB} ChronoEngine ChronoEngine_webgl)
+
+  # Ensure that the PYD library file is generated in the bin/ directory.
+  set_target_properties(${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME} PROPERTIES 
+                        PROJECT_LABEL "ChronoEngine_python_${CHPY_WEBGL}"
+                        OUTPUT_NAME   "${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME}"
+                        LIBRARY_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}"
+                        )
+
+  target_compile_definitions(${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME} PRIVATE "CH_IGNORE_DEPRECATED")
+  target_compile_definitions(${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME} PRIVATE "IGNORE_DEPRECATED_WARNING")
+
+  ADD_DEPENDENCIES(${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME} ChronoEngine)
+  ADD_DEPENDENCIES(${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME} ChronoEngine_webgl)
+  ADD_DEPENDENCIES(${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME} ${SWIG_MODULE_${CHPY_CORE}_REAL_NAME})
+
+  # Copy PY file in a package dir 
+  set(CHPY_WEBGL_PY_FILE "${CMAKE_SWIG_OUTDIR}/${CHPY_WEBGL}.py")
+  get_target_property(CHPY_WEBGL_PYD_FILE ${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME} LOCATION)
+  get_filename_component(CHPY_WEBGL_PYD_PATH "${CHPY_WEBGL_PYD_FILE}" PATH)
+  add_custom_command(TARGET ${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME}
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E make_directory ${CHPY_WEBGL_PYD_PATH}/${CHPY_PACKAGENAME})
+  add_custom_command(TARGET ${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME}
+                     POST_BUILD
+                     COMMAND ${CMAKE_COMMAND} -E copy ${CHPY_WEBGL_PY_FILE} ${CHPY_WEBGL_PYD_PATH}/${CHPY_PACKAGENAME})
+
+  # Install .pyd binary module (.so on linux)
+  install(TARGETS ${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME}
+          RUNTIME DESTINATION "${CH_INSTALL_PYTHON}/${CHPY_PACKAGENAME}"
+          LIBRARY DESTINATION "${CH_INSTALL_PYTHON}/${CHPY_PACKAGENAME}"
+          ARCHIVE DESTINATION "${CH_INSTALL_PYTHON}/${CHPY_PACKAGENAME}")
+  # Install .py module wrapper
+  install(FILES "${CHPY_WEBGL_PY_FILE}" DESTINATION "${CH_INSTALL_PYTHON}/${CHPY_PACKAGENAME}")
+
+  if (DBG_SCRIPT)
+    message("Module name:     ${CHPY_WEBGL}")
+    message("SWIG_REAL_NAME:  ${SWIG_MODULE_${CHPY_WEBGL}_REAL_NAME}")
+    message("PY file:         ${CHPY_WEBGL_PY_FILE}")
+    message("PYD file:        ${CHPY_WEBGL_PYD_FILE}")
+    message("PYD path:        ${CHPY_WEBGL_PYD_PATH}")
+  endif()
+
+endif()
 
 #-----------------------------------------------------------------------------
 # MODULE for the mkl python wrapper.
@@ -469,7 +539,7 @@ if(ENABLE_MODULE_MKL)
   else()
     SWIG_ADD_LIBRARY(${CHPY_MKL} LANGUAGE python SOURCES ${CHPY_MKL_MODULE_FILE})
   endif()
-  SWIG_LINK_LIBRARIES(${CHPY_MKL} ${PYTHON_LIBRARY} ChronoEngine ChronoEngine_mkl)
+  SWIG_LINK_LIBRARIES(${CHPY_MKL} ${CH_PYTHONLIB} ChronoEngine ChronoEngine_mkl)
 
   # Ensure that the PYD library file is generated in the bin/ directory.
   set_target_properties(${SWIG_MODULE_${CHPY_MKL}_REAL_NAME} PROPERTIES 
@@ -532,7 +602,7 @@ if(ENABLE_MODULE_CASCADE)
   else()
     SWIG_ADD_LIBRARY(${CHPY_CASCADE} LANGUAGE python SOURCES ${CHPY_CASCADE_MODULE_FILE})
   endif()
-  SWIG_LINK_LIBRARIES(${CHPY_CASCADE} ${PYTHON_LIBRARY} ChronoEngine ChronoEngine_cascade)
+  SWIG_LINK_LIBRARIES(${CHPY_CASCADE} ${CH_PYTHONLIB} ChronoEngine ChronoEngine_cascade)
 
   IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     ADD_DEFINITIONS( "/DWNT" )
@@ -612,8 +682,8 @@ if(ENABLE_MODULE_VEHICLE)
   else()
     SWIG_ADD_LIBRARY(${CHPY_VEHICLE} LANGUAGE python SOURCES ${CHPY_VEHICLE_MODULE_FILE})
   endif()
-  SWIG_LINK_LIBRARIES(${CHPY_VEHICLE} ${PYTHON_LIBRARY} ChronoEngine ChronoEngine_vehicle)
-  SWIG_LINK_LIBRARIES(${CHPY_VEHICLE} ${PYTHON_LIBRARY} ChronoEngine ChronoModels_vehicle)
+  SWIG_LINK_LIBRARIES(${CHPY_VEHICLE} ${CH_PYTHONLIB} ChronoEngine ChronoEngine_vehicle)
+  SWIG_LINK_LIBRARIES(${CHPY_VEHICLE} ${CH_PYTHONLIB} ChronoEngine ChronoModels_vehicle)
 
   IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     ADD_DEFINITIONS( "/DWNT" )
