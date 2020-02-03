@@ -91,7 +91,7 @@ class ChApiWebGL ChWebGLApp {
     /// Call this to end the scene draw at the end of each animation frame
     virtual void EndScene();
 
-    void  Setup();
+    void  AssetBindAll();
 
     //
     // Some wizard functions for 'easy setup' of the application window:

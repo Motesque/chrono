@@ -15,6 +15,7 @@
 #define CHHTTPSERVER_H
 
 #include <string>
+#include <thread>    
 #include "chrono_webgl/ChApiWebGL.h"
 
 namespace chrono {
@@ -24,10 +25,12 @@ class ChApiWebGL ChHttpServer {
   public:
     ChHttpServer();
     virtual ~ChHttpServer();
-    int run(const std::string& port, const std::string& doc_root );
+    int open(const std::string& port, const std::string& doc_root );
+    int close();
+    int send_message();
   private:
-    static void EventHandler(struct mg_connection *nc, int ev, void *ev_data);
-    static void HandleSumCall(struct mg_connection *nc, struct http_message *hm);
+    std::thread http_thread;
+    static std::string doc_root;
 };
 
 } // end namespace webgl

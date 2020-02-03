@@ -18,13 +18,14 @@ ChWebGLApp::ChWebGLApp(ChSystem* system, int port, const std::string& web_root):
 {
 }
 
-void ChWebGLApp::Setup() 
+void ChWebGLApp::AssetBindAll()
 {
-    server->run(std::to_string(port), web_root);
+    server->open(std::to_string(port), web_root);
 }
 
 ChWebGLApp::~ChWebGLApp() {
-
+    server->close();
+    server.reset();
 }
 
 void ChWebGLApp::BeginScene() {

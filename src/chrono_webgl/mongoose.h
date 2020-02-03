@@ -466,7 +466,7 @@ typedef struct stat cs_stat_t;
 #endif
 
 #ifndef MG_MAX_HTTP_SEND_MBUF
-#define MG_MAX_HTTP_SEND_MBUF 4096
+#define MG_MAX_HTTP_SEND_MBUF 8192
 #endif
 
 #ifndef MG_MAX_HTTP_HEADERS
