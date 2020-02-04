@@ -2,17 +2,21 @@
  * Copyright (c) 2014 Cesanta Software Limited
  * All rights reserved
  */
-
-#include "mongoose.h"
 #include <string>
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
 #include "chrono_webgl/ChHttpServer.h"
+#include "Python.h"
 #include <chrono>
+// to generate use xxd -i chrono_webgl_server.py
+#include "chrono_webgl/chrono_webgl_server_py.h"
 namespace chrono {
 namespace webgl {
-  
+
+PyObject* module_obj;
+
 ChHttpServer::ChHttpServer() {
 
 }
@@ -20,119 +24,134 @@ ChHttpServer::ChHttpServer() {
 ChHttpServer::~ChHttpServer() {
 
 }
+static volatile int server_ready=0;
+static ChHttpServer::ws_message_received_cb_t ws_message_received_cb;
 
-static struct mg_serve_http_opts s_http_server_opts;
-static std::vector<mg_connection*> connected_ws_clients;
+enum EventType {
+    EventType_Http_Server_Ready = 0,
+    EventType_Client_WS_Message = 1,
+    EventType_Client_HTTP_Message = 2
+};
 
-static int is_websocket(const struct mg_connection *nc) {
-  return nc->flags & MG_F_IS_WEBSOCKET;
+static PyObject* chrono_webgl_post_event(PyObject *self, PyObject *args)
+{
+    int event_type = -1;
+    PyObject* event_data = nullptr; 
+    if(!PyArg_ParseTuple(args, "iO", &event_type, &event_data)) { 
+        return NULL;
+    }
+    switch (event_type) {
+        case EventType_Http_Server_Ready: {server_ready = 1;} break;
+        case EventType_Client_WS_Message: {
+            if (ws_message_received_cb) {
+                ws_message_received_cb(nullptr,77);
+            }
+            // assume PyObject is a byte buffer
+            PyObject* objectsRepresentation = PyObject_Repr(event_data);
+            std::cout << "EventType_Client_WS_Message: " << std::string(PyUnicode_AsUTF8(objectsRepresentation)) << std::endl;
+            
+        } break;
+        default: ;
+    };
+    return Py_BuildValue("");
 }
 
-static void eventHandler(struct mg_connection *nc, int ev, void *ev_data) {
-  struct http_message *hm = (struct http_message *) ev_data;
+static PyMethodDef ChronoWebGLMethods[] = {
+    {"post_event", chrono_webgl_post_event, METH_VARARGS,
+     "Return whether the embedded Python runtime should exit"},
+    {NULL, NULL, 0, NULL}
+};
 
-  switch (ev) {
-    case MG_EV_WEBSOCKET_HANDSHAKE_DONE: {
-      std::cout << "websocket handshake done" << std::endl;
-      connected_ws_clients.push_back(nc);
-      /* New websocket connection. Tell everybody. */
-      //broadcast(nc, mg_mk_str("++ joined"));
-      break;
-    }
-    case MG_EV_WEBSOCKET_FRAME: {
-      struct websocket_message *wm = (struct websocket_message *) ev_data;
-      /* New websocket message. Tell everybody. */
-      struct mg_str d = {(char *) wm->data, wm->size};
-      // broadcast(nc, d);
-       std::cout << "websocket data frame received" << std::endl;
-      break;
-    }
-    case MG_EV_HTTP_REQUEST: {
-      mg_serve_http(nc, hm, s_http_server_opts); /* Serve static content */
-      break;
-    }
-    case MG_EV_CLOSE: {
-      /* Disconnect. Tell everybody. */
-      if (is_websocket(nc)) {
-        auto it = std::find(connected_ws_clients.begin(), connected_ws_clients.end(), nc);
-        if (it != connected_ws_clients.end()) {
-          std::cout << "removing ws client" << std::endl;
-          connected_ws_clients.erase(it);
-        }
-        std::cout << "websocket closed" << std::endl;
-        //broadcast(nc, mg_mk_str("-- left"));
-      }
-      break;
-    }
-    default:
-      break;
-  }
+static PyModuleDef ChronoWebGLModule = {
+    PyModuleDef_HEAD_INIT, "chrono_webgl", NULL, -1, ChronoWebGLMethods,
+    NULL, NULL, NULL, NULL
+};
+
+static PyObject* PyInit_ChronoWebGL(void)
+{
+    return PyModule_Create(&ChronoWebGLModule);
 }
 
-static volatile bool http_thread_should_run = false;
+#define CHECK_CALL_OBJECT(FUNC)  PyObject* val = FUNC; if (val) { Py_DECREF(val);} else  {PyErr_Print();}
 
-void run(const std::string& port, const std::string& doc_root, ChHttpServer* instance) {
-  static struct mg_mgr mgr;
-  struct mg_connection *nc;
-  struct mg_bind_opts bind_opts;
-  int i;
-  char *cp;
-  const char *err_str = "nix";
+void ChHttpServer::run(int port, const std::string& web_root) {
+    // inject our on-the-fly module
+    PyImport_AppendInittab("chrono_webgl", &PyInit_ChronoWebGL);
+    Py_Initialize();
+    // add the module_path to the PYTHON_PATH. The symplest way is to run a small Python script 
+    // as it is platform independent
+    // std::string cmd_py_path = std::string("import sys;sys.path.insert(0,'") + module_path + std::string("')");
+    // PyRun_SimpleString(cmd_py_path.c_str());
+    // PyObject* module_name = PyUnicode_DecodeFSDefault("chrono_webgl_server");
+    // xxd -i chrono_webgl_server.py
+    PyObject *builtins = PyEval_GetBuiltins();
+    PyObject *compile = PyDict_GetItemString(builtins, "compile");
+    PyObject *code = PyObject_CallFunction(compile, "sss", chrono_webgl_server_py, "chrono_webgl_server", "exec");
+    module_obj = PyImport_ExecCodeModule("chrono_webgl_server", code);
 
-  mg_mgr_init(&mgr, NULL);
-
-  s_http_server_opts.document_root = doc_root.c_str();
-  
-  /* Set HTTP server options */
-  memset(&bind_opts, 0, sizeof(bind_opts));
-  bind_opts.error_string = &err_str;
-  nc = mg_bind_opt(&mgr, port.c_str(), eventHandler, bind_opts);
-  if (nc == NULL) {
-    std::cerr << "Error starting server on port " << port << ":"  << *bind_opts.error_string << std::endl;
-  }
-
-  mg_set_protocol_http_websocket(nc);
-  s_http_server_opts.enable_directory_listing = "yes";
-  std::string msg = "Motesque";
-  const size_t buf_size= 1024*8;
-  uint8_t* buf = new uint8_t[buf_size];
-  srand(11);
-  std::chrono::high_resolution_clock timer;
-  auto now = timer.now();
-  auto last = now;
-  while(http_thread_should_run) {
-    now = timer.now();
-    auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(now - last).count();
-    if (deltaTime > 16) {
-      //last = timer.now();
-      //std::cout << "conencted ws clients: " << connected_ws_clients.size() << ":" << deltaTime << std::endl;
-      std::for_each(connected_ws_clients.begin(), connected_ws_clients.end(), [&](mg_connection* conn) {
-          mg_send_websocket_frame(conn, WEBSOCKET_OP_BINARY, buf, buf_size);
-      });
+    //module_obj = PyImport_Import(module_name);
+    //Py_DECREF(module_name);
+    if (module_obj != NULL) {
+      std::cout << "Loaded chrono_webgl_server module." << std::endl;
+      PyObject* func_main_obj = PyObject_GetAttrString(module_obj, "main");  
+      PyObject* arglist = Py_BuildValue("(is)", port, web_root.c_str());
+      CHECK_CALL_OBJECT(PyObject_CallObject(func_main_obj, arglist));
+      Py_DECREF(module_obj);
+      Py_DECREF(arglist);
+      module_obj = NULL;
+      Py_DECREF(func_main_obj);
     }
-    int n = mg_mgr_poll(&mgr, 100);  
-  }
-
-  mg_mgr_free(&mgr);
+    else {
+       PyErr_Print();
+       std::cout << "Cannot load chrono_webgl_server Python module. Please check the module_path" << std::endl;
+    }
+    Py_FinalizeEx();
 }
-std::string ChHttpServer::doc_root = "";
 
-int ChHttpServer::open(const std::string& port, const std::string& doc_root ) {
-  ChHttpServer::doc_root = doc_root;
-  s_http_server_opts.document_root = ChHttpServer::doc_root.c_str();
-  std::cout << "Starting RESTful server on port " << port << ":" << s_http_server_opts.document_root << std::endl;
-  http_thread_should_run = true;
-  http_thread = std::thread(run, port, doc_root, this);
+int ChHttpServer::open(int port, const std::string& web_root, ws_message_received_cb_t cb) {
+  ws_message_received_cb = cb;
+  python_thread = std::thread(&ChHttpServer::run, this, port, web_root);
+  while (!server_ready) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
   return 0;
 }
 
 int ChHttpServer::close() {
-   http_thread_should_run = false;
-   http_thread.join();
+    //https://docs.python.org/3/c-api/init.html#gilstate
+    // if we have python running, notify it to end
+   if (module_obj) {
+      PyGILState_STATE gstate;
+      gstate = PyGILState_Ensure(); 
+      PyObject* f = PyObject_GetAttrString(module_obj, "notify_shutdown");  
+      if (f) {
+        CHECK_CALL_OBJECT(PyObject_CallObject(f, nullptr));
+        Py_DECREF(f);
+      }
+      else {
+          PyErr_Print();
+      }
+      PyGILState_Release(gstate);
+   }
+   python_thread.join();
+   std::cout << "ChHttpServer closed" << std::endl;
    return 0;
 }
 
-
+ int ChHttpServer::send_ws_message(const uint8_t* data, size_t size)
+ {
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure(); 
+    PyObject* func_queue_ws_data = PyObject_GetAttrString(module_obj, "queue_ws_data");  
+    if (func_queue_ws_data) {
+         PyObject* arglist = Py_BuildValue("(y#)", data, size);
+         CHECK_CALL_OBJECT(PyObject_CallObject(func_queue_ws_data, arglist));
+         Py_DECREF(arglist);
+         Py_DECREF(func_queue_ws_data);
+    }
+    PyGILState_Release(gstate);
+    return 0;
+ }
 
 }
 

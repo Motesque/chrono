@@ -16,22 +16,28 @@
 
 #include <string>
 #include <thread>    
+#include <functional>
 #include "chrono_webgl/ChApiWebGL.h"
+
 
 namespace chrono {
 namespace webgl {
 
 class ChApiWebGL ChHttpServer {
   public:
+    using ws_message_received_cb_t =  std::function<void(const uint8_t* data, size_t size)>;
     ChHttpServer();
     virtual ~ChHttpServer();
-    int open(const std::string& port, const std::string& doc_root );
+    int open(int port, const std::string& web_root, ws_message_received_cb_t cb);
     int close();
-    int send_message();
+    int send_ws_message(const uint8_t* data, size_t size);
+    
   private:
-    std::thread http_thread;
-    static std::string doc_root;
+    void run(int port, const std::string& web_root);
+  private:
+    std::thread python_thread;
 };
+
 
 } // end namespace webgl
 } // end namespace chrono

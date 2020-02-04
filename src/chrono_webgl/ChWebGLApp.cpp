@@ -20,7 +20,7 @@ ChWebGLApp::ChWebGLApp(ChSystem* system, int port, const std::string& web_root):
 
 void ChWebGLApp::AssetBindAll()
 {
-    server->open(std::to_string(port), web_root);
+    server->open(port, web_root, nullptr);
 }
 
 ChWebGLApp::~ChWebGLApp() {

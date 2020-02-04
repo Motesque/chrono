@@ -19,7 +19,6 @@ MESSAGE(STATUS "==== Chrono WebGL module ====")
 SET(ChronoEngine_WEBGL_SOURCES
   ChWebGLApp.cpp
   ChHttpServer.cpp
-  mongoose.cpp
   main.cpp
 )
 
@@ -27,7 +26,6 @@ SET(ChronoEngine_WEBGL_HEADERS
   ChWebGLApp.h
   ChHttpServer.h
   ChApiWebGL.h
-  mongoose.h
 )
 
 SOURCE_GROUP("" FILES
