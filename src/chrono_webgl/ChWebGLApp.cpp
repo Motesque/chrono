@@ -2,12 +2,14 @@
 #include "chrono_webgl/ChWebGLApp.h"
 #include <memory>
 #include <iostream>
+
+
 namespace chrono {
 namespace webgl {
 
 ChWebGLApp::ChWebGLApp(ChSystem* system, int port, const std::string& web_root):
     system(system),
-    server(new ChHttpServer()),
+    server(new ChHttpServerPython()),
     port(port),
     web_root(web_root),
     step_manage(false),
@@ -20,12 +22,11 @@ ChWebGLApp::ChWebGLApp(ChSystem* system, int port, const std::string& web_root):
 
 void ChWebGLApp::AssetBindAll()
 {
-    server->open(port, web_root, nullptr);
+    server->Start(port, web_root, nullptr);
 }
 
 ChWebGLApp::~ChWebGLApp() {
-    server->close();
-    server.reset();
+    server->Stop();
 }
 
 void ChWebGLApp::BeginScene() {

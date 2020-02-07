@@ -23,17 +23,24 @@
 namespace chrono {
 namespace webgl {
 
-class ChApiWebGL ChHttpServer {
+
+class ChApiWebGL ChHttpServerInterface {
   public:
-    using ws_message_received_cb_t =  std::function<void(const uint8_t* data, size_t size)>;
-    ChHttpServer();
-    virtual ~ChHttpServer();
-    int open(int port, const std::string& web_root, ws_message_received_cb_t cb);
-    int close();
-    int send_ws_message(const uint8_t* data, size_t size);
-    
+    using websocket_message_received_cb_t =  std::function<void(const uint8_t* data, size_t size)>;
+    virtual int Start(int port, const std::string& web_root, websocket_message_received_cb_t cb) = 0;
+    virtual int Stop() = 0;
+    virtual int SendWebsocketMessage(const uint8_t* data, size_t size) = 0;
+};
+
+class ChApiWebGL ChHttpServerPython : public ChHttpServerInterface {
+  public:
+    ChHttpServerPython();
+    virtual ~ChHttpServerPython();
+    int Start(int port, const std::string& web_root, websocket_message_received_cb_t cb);
+    int Stop();
+    int SendWebsocketMessage(const uint8_t* data, size_t size);
   private:
-    void run(int port, const std::string& web_root);
+    void RunPython(int port, const std::string& web_root);
   private:
     std::thread python_thread;
 };

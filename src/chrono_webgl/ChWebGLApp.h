@@ -108,7 +108,7 @@ class ChApiWebGL ChWebGLApp {
   private:
     // The ChronoEngine system:
     ChSystem* system;
-    std::shared_ptr<ChHttpServer>  server;
+    std::shared_ptr<ChHttpServerPython>  server;
 
     // The port to serve the web page:
     int port;
@@ -121,7 +121,7 @@ class ChApiWebGL ChWebGLApp {
     double symbol_scale; 
    
     ChRealtimeStepTimer m_realtime_timer;
-    friend class ChHttpServer;
+    friend class ChHttpServerPython;
 };
 
 /// @} webgl_module

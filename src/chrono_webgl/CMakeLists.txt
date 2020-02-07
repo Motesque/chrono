@@ -38,6 +38,7 @@ find_package (Python3 COMPONENTS Interpreter Development REQUIRED)
 
 INCLUDE_DIRECTORIES(
   ${Python3_INCLUDE_DIRS}
+  ../chrono_thirdparty/rapidjson
 )
 
 #ADD_LIBRARY(ChronoEngine_webgl SHARED

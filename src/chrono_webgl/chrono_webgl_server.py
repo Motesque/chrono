@@ -1,9 +1,14 @@
+R"+++(
+# Wrap in C++11 raw string to include directly in .cpp file. 
+# For testing with Python proper, just comment out the first and last line of this file
+
 import asyncio
 import aiohttp
 from aiohttp import WSCloseCode
 from aiohttp import web
 import enum
 import chrono_webgl
+import os
 
 loop = None
 all_clients = []
@@ -52,14 +57,23 @@ def notify_shutdown():
         shutdown_event.set()
     loop.call_soon_threadsafe(_do)
    
+def index_handler(request):
+    """Special handler for index.html to prevent ca
+    """
+    headers = {"Cache-Control" : "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache"}
+    return web.FileResponse(path=os.path.join(request.config_dict["web_root"], "index.html"), headers=headers)
+
 
 def main(port, web_root):
     global loop 
     loop = asyncio.get_event_loop()
     async def run():
         app = web.Application()
+        app["web_root"] = web_root
         app.add_routes([web.get('/ws', websocket_handler),
-                        web.static('/', web_root, show_index=True)])
+                        web.get('/', index_handler),
+                        web.static('/static', web_root, show_index=True)])
         app_runner = aiohttp.web.AppRunner(app)
         app.on_shutdown.append(on_shutdown)
         await app_runner.setup()
@@ -75,3 +89,5 @@ def main(port, web_root):
 
 if __name__ == "__main__":
     main(8888,"/Users/tobiaslang/dev/chrono/src/chrono_webgl/resources")
+    
+)+++"
