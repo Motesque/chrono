@@ -22,7 +22,7 @@ export class ChronoPersistentConnection {
         this.socket.onclose = (evt) => { 
             console.log(`[close] Connection closed. wasClean=${evt.wasClean}`); 
             this.onClose();
-            setTimeout(() => this._open(), 2048);
+            setTimeout(() => this._open(), 1024);
         };
         this.socket.onerror = (evt) => { console.log(`[error] Connection error. error="${evt.message}"`); };
         this.socket.onmessage = (evt) => { 

@@ -1,0 +1,38 @@
+//https://github.com/KageKirin/flatGLM/blob/master/schemas/flatmath.fbs
+
+namespace chrono.webgl;
+
+
+struct Vector3f(native_inline) 
+{
+  x:float;
+  y:float;
+  z:float;
+}
+
+struct Color(native_inline)  {
+   r:float;
+   g:float;
+   b:float; 
+   a:float; 
+}
+
+struct Vector3d(native_inline) 
+ {
+  x:double;
+  y:double;
+  z:double;
+}
+
+struct Matrix3x3f(native_inline) {
+	_0: Vector3f;
+	_1: Vector3f;
+	_2: Vector3f;
+}
+
+struct  Matrix3x3d(native_inline) {
+	_0: Vector3d;
+	_1: Vector3d;
+	_2: Vector3d;
+}
+

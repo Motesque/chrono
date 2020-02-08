@@ -35,10 +35,21 @@ SOURCE_GROUP("" FILES
 
 find_package (Python3 COMPONENTS Interpreter Development REQUIRED)
 
+SET(FLATBUFFERS_INCLUDE_DIRS "/usr/local/Cellar/flatbuffers/1.11.0/include")
+# find_package(FlatBuffers)
+# if(FLATBUFFERS_FOUND)
+#   message(STATUS "FlatBuffers version: ${FLATBUFFERS_VERSION}")
+#   message(STATUS "FlatBuffers include directory: ${FLATBUFFERS_INCLUDE_DIR}")
+# else()
+#   mark_as_advanced(CLEAR FLATBUFFERS_INCLUDE_DIR)
+#   mark_as_advanced(FORCE FLATBUFFERS_DIR)
+#   message(FATAL_ERROR "FlatBuffers not found. Specify FLATBUFFERS_INCLUDE_DIR")
+# endif()
 
 INCLUDE_DIRECTORIES(
+  schemas
   ${Python3_INCLUDE_DIRS}
-  ../chrono_thirdparty/rapidjson
+  ${FLATBUFFERS_INCLUDE_DIRS}
 )
 
 #ADD_LIBRARY(ChronoEngine_webgl SHARED

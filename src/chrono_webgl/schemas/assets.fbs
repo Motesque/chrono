@@ -1,0 +1,80 @@
+include "math.fbs";
+
+namespace chrono.webgl;
+
+
+union AnyShape { BoxShape, 
+                   SphereShape,
+                   CylinderShape
+                 }
+
+table BoxShape {
+  size:  Vector3f;
+}
+
+table SphereShape {
+  radius: float; 
+}
+
+table CylinderShape  {
+    height: float;
+    rad: float; 
+}
+
+table Texture {
+  filename: string;
+}
+
+table Material {
+  color_diffuse: Color;
+  color_specular: Color;
+  texture_diffuse: Texture;
+  texture_specular: Texture;
+}
+
+table CommandNewMaterial {
+    material_id: uint64;
+    material: Material;
+}
+
+table CommandModifyMaterial {
+    material_id: uint64;
+    material: Material;
+}
+
+table CommandNewShape {
+    shape_id: uint64;
+    shape: AnyShape;
+}
+
+table CommandSetMaterial {
+    shape_id: uint64;
+    material_id: uint64;
+}
+
+table CommandLoadCache {
+    
+    filename: string;
+}
+
+union AnyCommand { CommandLoadCache,
+                   CommandNewMaterial,
+                   CommandNewShape
+                 }
+
+// messages can have a sequence. Those with one should only applied up if larger then our counter
+// if sequence is 0, it is volatile message and has to be set every frame 
+
+
+table WebGLMessage
+{
+   sequence: uint32;
+   command: AnyCommand;
+}
+
+table WebGLMessageList
+{
+   message: [WebGLMessage];
+}
+
+root_type WebGLMessageList;
